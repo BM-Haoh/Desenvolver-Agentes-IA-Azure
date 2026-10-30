@@ -112,6 +112,7 @@ class RoutingAgent:
             raise ValueError(f'Agent {agent_name} not found')
         
         # Retrieve the remote agent's A2A client using the agent name 
+        client = self.remote_agent_connections[agent_name]  
         
 
         if not client:
@@ -120,12 +121,21 @@ class RoutingAgent:
         message_id = str(uuid.uuid4())
 
         # Construct the payload to send to the remote agent
+        payload: dict[str, Any] = {
+            'message': {
+                'role': 'user',
+                'parts': [{'kind': 'text', 'text': task}],
+                'messageId': message_id,
+            },
+        }
         
         
         # Wrap the payload in a SendMessageRequest object
+        message_request = SendMessageRequest(id=message_id, params=MessageSendParams.model_validate(payload))
         
 
         # Send the message to the remote agent client and await the response
+        send_response: SendMessageResponse = await client.send_message(message_request=message_request)
         
         
         if not isinstance(send_response.root, SendMessageSuccessResponse):
@@ -247,8 +257,8 @@ async def _get_initialized_routing_agent_sync() -> RoutingAgent:
     async def _async_main() -> RoutingAgent:
         routing_agent_instance = await RoutingAgent.create(
             remote_agent_addresses=[
-                f"http://{os.environ["SERVER_URL"]}:{os.environ["TITLE_AGENT_PORT"]}",
-                f"http://{os.environ["SERVER_URL"]}:{os.environ["OUTLINE_AGENT_PORT"]}",
+                f"http://{os.environ['SERVER_URL']}:{os.environ['TITLE_AGENT_PORT']}",
+                f"http://{os.environ['SERVER_URL']}:{os.environ['OUTLINE_AGENT_PORT']}",
             ]
         )
         # Create the Azure AI agent
